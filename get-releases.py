@@ -20,6 +20,7 @@
 
 import argparse
 import datetime
+import os
 import lastfm
 
 api_key = '23caa86333d2cb2055fa82129802780a'
@@ -43,6 +44,25 @@ def get_albums(artist):
     return albums
 
 
+def get_existance_releases(path):
+    """get releases from existant directory"""
+    return [os.path.basename(dirname) for dirname, dirnames, filenames in os.walk(os.path.join(path, ""))]
+
+
+def get_uniq(existance, lastfm):
+    """return uniq releases"""
+    releases = {}
+    for lastfm_release in lastfm:
+        exist = False
+        for ex_release in existance:
+            if (ex_release.lower().find(lastfm[lastfm_release].lower()) > -1):
+                exist = True
+                break
+        if (not exist):
+            releases[lastfm_release] = lastfm[lastfm_release]
+    return releases
+
+
 def sort_albums(albums, count):
     """sort albums"""
     if (count == 0):
@@ -53,13 +73,20 @@ def sort_albums(albums, count):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description = "Get lastest releases from given artist")
-    parser.add_argument('artist', help = "artist names comma separated")
+    parser.add_argument('artist', help = "artist names comma separated or path to directory")
     parser.add_argument('-c', '--count', dest = 'count', type=int, default = 1, help = "count of releases. 0 is all")
     args = parser.parse_args()
 
-    artists = args.artist.split(',')
+    dir_list = False
+    if (os.path.isdir(args.artist)):
+        artists = os.listdir(args.artist)
+        dir_list = True
+    else:
+        artists = args.artist.split(',')
     for artist in artists:
         print ("%s :" % artist)
         albums = get_albums(artist)
+        if (dir_list):
+            albums = get_uniq(get_existance_releases(os.path.join(args.artist, artist)), albums)
         for album in sort_albums(albums, args.count):
             print ("  %4i-%02i-%02i : %s" % (album[0].year, album[0].month, album[0].day, album[1]))
